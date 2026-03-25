@@ -1,0 +1,1238 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>VoiceBrief – AI Voice News & Daily Updates</title>
+    <meta name="description" content="Listen to News, Never Miss Updates. AI-powered voice news and daily updates platform.">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <style>
+        /* ==================== RESET & BASE ==================== */
+        *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+
+        :root {
+            --grad-start: #667eea;
+            --grad-end: #764ba2;
+            --grad-mid: #6e68c8;
+            --card-bg: rgba(255, 255, 255, 0.12);
+            --card-bg-solid: rgba(255, 255, 255, 0.18);
+            --glass-border: rgba(255, 255, 255, 0.2);
+            --text-primary: #ffffff;
+            --text-secondary: rgba(255, 255, 255, 0.75);
+            --text-muted: rgba(255, 255, 255, 0.5);
+            --accent: #ffd166;
+            --accent-glow: rgba(255, 209, 102, 0.3);
+            --success: #06d6a0;
+            --radius: 18px;
+            --radius-sm: 12px;
+            --radius-full: 50px;
+            --shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
+            --shadow-sm: 0 4px 16px rgba(0, 0, 0, 0.15);
+            --transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+            background: linear-gradient(135deg, var(--grad-start), var(--grad-mid), var(--grad-end));
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: flex-start;
+            color: var(--text-primary);
+            overflow-x: hidden;
+        }
+
+        /* ==================== APP SHELL ==================== */
+        .app-container {
+            width: 100%;
+            max-width: 430px;
+            min-height: 100vh;
+            position: relative;
+            overflow: hidden;
+            background: linear-gradient(160deg, var(--grad-start), var(--grad-mid) 50%, var(--grad-end));
+        }
+
+        /* Decorative blobs */
+        .app-container::before {
+            content: '';
+            position: fixed;
+            width: 300px; height: 300px;
+            background: radial-gradient(circle, rgba(255,209,102,0.15) 0%, transparent 70%);
+            top: -80px; right: -80px;
+            border-radius: 50%;
+            pointer-events: none;
+            z-index: 0;
+        }
+        .app-container::after {
+            content: '';
+            position: fixed;
+            width: 250px; height: 250px;
+            background: radial-gradient(circle, rgba(6,214,160,0.1) 0%, transparent 70%);
+            bottom: 100px; left: -60px;
+            border-radius: 50%;
+            pointer-events: none;
+            z-index: 0;
+        }
+
+        /* ==================== SCREENS ==================== */
+        .screen {
+            position: absolute;
+            top: 0; left: 0;
+            width: 100%; height: 100%;
+            min-height: 100vh;
+            overflow-y: auto;
+            padding-bottom: 100px;
+            opacity: 0;
+            transform: translateY(20px);
+            transition: opacity 0.45s ease, transform 0.45s ease;
+            pointer-events: none;
+            z-index: 1;
+        }
+        .screen.active {
+            opacity: 1;
+            transform: translateY(0);
+            pointer-events: all;
+        }
+
+        /* ==================== SPLASH SCREEN ==================== */
+        #splash-screen {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding-bottom: 0;
+            z-index: 100;
+        }
+
+        .splash-logo {
+            width: 120px; height: 120px;
+            margin-bottom: 32px;
+            animation: pulse-glow 2s ease-in-out infinite;
+        }
+
+        @keyframes pulse-glow {
+            0%, 100% { filter: drop-shadow(0 0 20px rgba(255,209,102,0.4)); transform: scale(1); }
+            50% { filter: drop-shadow(0 0 40px rgba(255,209,102,0.7)); transform: scale(1.05); }
+        }
+
+        .splash-name {
+            font-size: 38px;
+            font-weight: 800;
+            letter-spacing: -0.5px;
+            margin-bottom: 12px;
+            background: linear-gradient(135deg, #fff 30%, var(--accent));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .splash-tagline {
+            font-size: 15px;
+            font-weight: 400;
+            color: var(--text-secondary);
+            letter-spacing: 0.3px;
+            margin-bottom: 48px;
+        }
+
+        .splash-loader {
+            width: 48px; height: 48px;
+            border: 3px solid rgba(255,255,255,0.15);
+            border-top-color: var(--accent);
+            border-radius: 50%;
+            animation: spin 0.8s linear infinite;
+        }
+
+        @keyframes spin { to { transform: rotate(360deg); } }
+
+        /* ==================== HEADER ==================== */
+        .header {
+            padding: 20px 24px 16px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            position: sticky;
+            top: 0;
+            z-index: 10;
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            background: rgba(102, 126, 234, 0.5);
+        }
+
+        .header-title {
+            font-size: 24px;
+            font-weight: 700;
+            letter-spacing: -0.3px;
+        }
+
+        .header-icon {
+            width: 40px; height: 40px;
+            border-radius: 50%;
+            background: var(--card-bg);
+            border: 1px solid var(--glass-border);
+            display: flex; align-items: center; justify-content: center;
+            cursor: pointer;
+            transition: var(--transition);
+        }
+        .header-icon:hover { background: var(--card-bg-solid); }
+
+        /* ==================== SECTION TITLES ==================== */
+        .section-title {
+            font-size: 18px;
+            font-weight: 700;
+            padding: 20px 24px 12px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .section-title .emoji {
+            font-size: 22px;
+        }
+
+        .section-subtitle {
+            font-size: 13px;
+            color: var(--text-muted);
+            padding: 0 24px;
+            margin-bottom: 16px;
+        }
+
+        /* ==================== CARDS ==================== */
+        .cards-scroll {
+            display: flex;
+            gap: 14px;
+            padding: 0 24px 8px;
+            overflow-x: auto;
+            scroll-snap-type: x mandatory;
+            -webkit-overflow-scrolling: touch;
+            scrollbar-width: none;
+        }
+        .cards-scroll::-webkit-scrollbar { display: none; }
+
+        .card {
+            min-width: 260px;
+            max-width: 280px;
+            background: var(--card-bg);
+            backdrop-filter: blur(16px);
+            -webkit-backdrop-filter: blur(16px);
+            border: 1px solid var(--glass-border);
+            border-radius: var(--radius);
+            padding: 20px;
+            scroll-snap-align: start;
+            transition: var(--transition);
+            cursor: pointer;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .card::before {
+            content: '';
+            position: absolute;
+            top: 0; left: 0; right: 0;
+            height: 3px;
+            background: linear-gradient(90deg, var(--accent), var(--success));
+            opacity: 0;
+            transition: var(--transition);
+        }
+
+        .card:hover { transform: translateY(-4px); background: var(--card-bg-solid); }
+        .card:hover::before { opacity: 1; }
+
+        .card-tag {
+            display: inline-block;
+            font-size: 11px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.8px;
+            color: var(--accent);
+            background: var(--accent-glow);
+            padding: 4px 10px;
+            border-radius: 6px;
+            margin-bottom: 12px;
+        }
+
+        .card-title {
+            font-size: 16px;
+            font-weight: 600;
+            line-height: 1.4;
+            margin-bottom: 8px;
+        }
+
+        .card-summary {
+            font-size: 13px;
+            color: var(--text-secondary);
+            line-height: 1.5;
+            margin-bottom: 16px;
+        }
+
+        .card-footer {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .card-time {
+            font-size: 12px;
+            color: var(--text-muted);
+            display: flex;
+            align-items: center;
+            gap: 4px;
+        }
+
+        .play-btn {
+            width: 44px; height: 44px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, var(--accent), #f4a261);
+            border: none;
+            display: flex; align-items: center; justify-content: center;
+            cursor: pointer;
+            box-shadow: 0 4px 15px var(--accent-glow);
+            transition: var(--transition);
+        }
+        .play-btn:hover { transform: scale(1.1); box-shadow: 0 6px 25px var(--accent-glow); }
+        .play-btn:active { transform: scale(0.95); }
+
+        .play-btn svg { width: 18px; height: 18px; fill: #1a1a2e; margin-left: 2px; }
+
+        /* ==================== VERTICAL CARDS ==================== */
+        .cards-vertical {
+            padding: 0 24px;
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+
+        .card-h {
+            background: var(--card-bg);
+            backdrop-filter: blur(16px);
+            -webkit-backdrop-filter: blur(16px);
+            border: 1px solid var(--glass-border);
+            border-radius: var(--radius);
+            padding: 16px 18px;
+            display: flex;
+            align-items: center;
+            gap: 14px;
+            transition: var(--transition);
+            cursor: pointer;
+        }
+        .card-h:hover { background: var(--card-bg-solid); transform: translateX(4px); }
+
+        .card-h-icon {
+            width: 48px; height: 48px;
+            border-radius: var(--radius-sm);
+            background: linear-gradient(135deg, rgba(255,209,102,0.2), rgba(6,214,160,0.2));
+            display: flex; align-items: center; justify-content: center;
+            font-size: 24px;
+            flex-shrink: 0;
+        }
+
+        .card-h-content { flex: 1; min-width: 0; }
+        .card-h-title { font-size: 14px; font-weight: 600; margin-bottom: 4px; }
+        .card-h-desc { font-size: 12px; color: var(--text-secondary); line-height: 1.4; 
+            white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+        .play-btn-sm {
+            width: 36px; height: 36px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, var(--accent), #f4a261);
+            border: none;
+            display: flex; align-items: center; justify-content: center;
+            cursor: pointer;
+            flex-shrink: 0;
+            transition: var(--transition);
+        }
+        .play-btn-sm:hover { transform: scale(1.1); }
+        .play-btn-sm svg { width: 14px; height: 14px; fill: #1a1a2e; margin-left: 1px; }
+
+        /* ==================== CATEGORY CHIPS ==================== */
+        .chips-container {
+            padding: 0 24px;
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            margin-bottom: 24px;
+        }
+
+        .chip {
+            padding: 10px 20px;
+            border-radius: var(--radius-full);
+            background: var(--card-bg);
+            border: 1.5px solid var(--glass-border);
+            font-size: 14px;
+            font-weight: 500;
+            color: var(--text-primary);
+            cursor: pointer;
+            transition: var(--transition);
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            user-select: none;
+        }
+        .chip:hover { background: var(--card-bg-solid); }
+        .chip.selected {
+            background: linear-gradient(135deg, var(--accent), #f4a261);
+            color: #1a1a2e;
+            border-color: var(--accent);
+            font-weight: 600;
+            box-shadow: 0 4px 15px var(--accent-glow);
+        }
+        .chip .check { display: none; font-size: 14px; }
+        .chip.selected .check { display: inline; }
+
+        /* ==================== CATEGORY SCREEN (FULL) ==================== */
+        .cat-grid {
+            padding: 0 24px;
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 14px;
+        }
+
+        .cat-card {
+            background: var(--card-bg);
+            backdrop-filter: blur(16px);
+            -webkit-backdrop-filter: blur(16px);
+            border: 1.5px solid var(--glass-border);
+            border-radius: var(--radius);
+            padding: 28px 18px;
+            text-align: center;
+            cursor: pointer;
+            transition: var(--transition);
+            position: relative;
+            overflow: hidden;
+        }
+        .cat-card:hover { background: var(--card-bg-solid); transform: translateY(-3px); }
+        .cat-card.selected {
+            border-color: var(--accent);
+            background: rgba(255,209,102,0.12);
+        }
+        .cat-card.selected::after {
+            content: '✓';
+            position: absolute;
+            top: 10px; right: 12px;
+            width: 24px; height: 24px;
+            background: var(--accent);
+            color: #1a1a2e;
+            border-radius: 50%;
+            font-size: 14px;
+            font-weight: 700;
+            display: flex; align-items: center; justify-content: center;
+        }
+
+        .cat-card-emoji { font-size: 36px; margin-bottom: 12px; }
+        .cat-card-name { font-size: 15px; font-weight: 600; margin-bottom: 4px; }
+        .cat-card-count { font-size: 12px; color: var(--text-muted); }
+
+        .save-btn {
+            margin: 28px 24px;
+            width: calc(100% - 48px);
+            padding: 16px;
+            border-radius: var(--radius-full);
+            background: linear-gradient(135deg, var(--accent), #f4a261);
+            color: #1a1a2e;
+            font-family: 'Inter', sans-serif;
+            font-size: 16px;
+            font-weight: 700;
+            border: none;
+            cursor: pointer;
+            box-shadow: 0 6px 25px var(--accent-glow);
+            transition: var(--transition);
+            letter-spacing: 0.3px;
+        }
+        .save-btn:hover { transform: translateY(-2px); box-shadow: 0 8px 35px var(--accent-glow); }
+        .save-btn:active { transform: translateY(0); }
+
+        /* ==================== AUDIO PLAYER OVERLAY ==================== */
+        .player-overlay {
+            position: fixed;
+            bottom: 0; left: 0; right: 0;
+            z-index: 200;
+            transform: translateY(100%);
+            transition: transform 0.45s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+        .player-overlay.show { transform: translateY(0); }
+
+        .player-bg {
+            max-width: 430px;
+            margin: 0 auto;
+            background: linear-gradient(180deg, rgba(30,20,60,0.95) 0%, rgba(20,10,45,0.98) 100%);
+            backdrop-filter: blur(40px);
+            -webkit-backdrop-filter: blur(40px);
+            border-top: 1px solid rgba(255,255,255,0.1);
+            border-radius: 28px 28px 0 0;
+            padding: 20px 28px 40px;
+        }
+
+        .player-handle {
+            width: 40px; height: 4px;
+            background: rgba(255,255,255,0.25);
+            border-radius: 2px;
+            margin: 0 auto 24px;
+            cursor: pointer;
+        }
+
+        .player-art {
+            width: 200px; height: 200px;
+            margin: 0 auto 28px;
+            border-radius: 24px;
+            background: linear-gradient(135deg, var(--grad-start), var(--grad-end));
+            display: flex; align-items: center; justify-content: center;
+            box-shadow: 0 16px 48px rgba(0,0,0,0.4);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .player-art::before {
+            content: '';
+            position: absolute;
+            inset: 0;
+            background: repeating-conic-gradient(
+                rgba(255,255,255,0.03) 0% 25%, transparent 0% 50%
+            );
+            animation: art-rotate 12s linear infinite;
+        }
+
+        @keyframes art-rotate { to { transform: rotate(360deg); } }
+
+        .player-art svg { width: 80px; height: 80px; position: relative; z-index: 1; }
+
+        .player-title {
+            text-align: center;
+            font-size: 18px;
+            font-weight: 700;
+            margin-bottom: 4px;
+        }
+        .player-source {
+            text-align: center;
+            font-size: 13px;
+            color: var(--text-muted);
+            margin-bottom: 24px;
+        }
+
+        .player-voice {
+            text-align: center;
+            font-size: 12px;
+            color: var(--accent);
+            font-weight: 500;
+            margin-bottom: 20px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 6px;
+        }
+
+        .progress-container {
+            margin-bottom: 8px;
+        }
+
+        .progress-bar {
+            width: 100%;
+            height: 4px;
+            background: rgba(255,255,255,0.12);
+            border-radius: 2px;
+            overflow: hidden;
+            cursor: pointer;
+        }
+
+        .progress-fill {
+            height: 100%;
+            width: 0%;
+            background: linear-gradient(90deg, var(--accent), #f4a261);
+            border-radius: 2px;
+            transition: width 0.3s ease;
+        }
+
+        .progress-times {
+            display: flex;
+            justify-content: space-between;
+            font-size: 11px;
+            color: var(--text-muted);
+            margin-top: 6px;
+        }
+
+        .player-controls {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 24px;
+            margin-top: 24px;
+        }
+
+        .ctrl-btn {
+            width: 48px; height: 48px;
+            border-radius: 50%;
+            background: transparent;
+            border: none;
+            cursor: pointer;
+            display: flex; align-items: center; justify-content: center;
+            transition: var(--transition);
+        }
+        .ctrl-btn:hover { background: rgba(255,255,255,0.08); }
+        .ctrl-btn svg { width: 24px; height: 24px; fill: var(--text-secondary); }
+
+        .ctrl-play {
+            width: 64px; height: 64px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, var(--accent), #f4a261);
+            border: none;
+            cursor: pointer;
+            display: flex; align-items: center; justify-content: center;
+            box-shadow: 0 6px 25px var(--accent-glow);
+            transition: var(--transition);
+        }
+        .ctrl-play:hover { transform: scale(1.08); }
+        .ctrl-play:active { transform: scale(0.96); }
+        .ctrl-play svg { width: 28px; height: 28px; fill: #1a1a2e; }
+
+        .player-stop-btn {
+            margin: 20px auto 0;
+            display: block;
+            padding: 10px 28px;
+            border-radius: var(--radius-full);
+            background: rgba(255,255,255,0.08);
+            border: 1px solid rgba(255,255,255,0.15);
+            color: var(--text-secondary);
+            font-family: 'Inter', sans-serif;
+            font-size: 13px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: var(--transition);
+        }
+        .player-stop-btn:hover { background: rgba(255,80,80,0.15); color: #ff6b6b; border-color: rgba(255,80,80,0.3); }
+
+        /* ==================== BOTTOM NAV ==================== */
+        .bottom-nav {
+            position: fixed;
+            bottom: 0; left: 0; right: 0;
+            z-index: 50;
+        }
+
+        .nav-inner {
+            max-width: 430px;
+            margin: 0 auto;
+            display: flex;
+            justify-content: space-around;
+            align-items: center;
+            padding: 12px 8px 20px;
+            background: rgba(20, 10, 45, 0.92);
+            backdrop-filter: blur(30px);
+            -webkit-backdrop-filter: blur(30px);
+            border-top: 1px solid rgba(255,255,255,0.08);
+        }
+
+        .nav-item {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 4px;
+            cursor: pointer;
+            padding: 4px 12px;
+            border-radius: 12px;
+            transition: var(--transition);
+            -webkit-tap-highlight-color: transparent;
+        }
+        .nav-item:hover { background: rgba(255,255,255,0.06); }
+
+        .nav-item svg { width: 24px; height: 24px; fill: var(--text-muted); transition: var(--transition); }
+        .nav-item span { font-size: 11px; font-weight: 500; color: var(--text-muted); transition: var(--transition); }
+
+        .nav-item.active svg { fill: var(--accent); }
+        .nav-item.active span { color: var(--accent); font-weight: 600; }
+
+        .nav-item.active::after {
+            content: '';
+            width: 4px; height: 4px;
+            background: var(--accent);
+            border-radius: 50%;
+            margin-top: 2px;
+        }
+
+        /* ==================== ANIMATIONS ==================== */
+        @keyframes fadeInUp {
+            from { opacity: 0; transform: translateY(30px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .animate-in { animation: fadeInUp 0.5s ease both; }
+        .animate-delay-1 { animation-delay: 0.1s; }
+        .animate-delay-2 { animation-delay: 0.2s; }
+        .animate-delay-3 { animation-delay: 0.3s; }
+        .animate-delay-4 { animation-delay: 0.4s; }
+
+        /* ==================== SCROLLBAR ==================== */
+        .screen::-webkit-scrollbar { width: 0; }
+
+        /* ==================== WAVE ANIMATION ==================== */
+        .wave-bars {
+            display: flex;
+            align-items: flex-end;
+            gap: 3px;
+            height: 20px;
+        }
+        .wave-bars .bar {
+            width: 3px;
+            background: var(--accent);
+            border-radius: 2px;
+            animation: wave-bar 1s ease-in-out infinite;
+        }
+        .wave-bars .bar:nth-child(1) { height: 8px; animation-delay: 0s; }
+        .wave-bars .bar:nth-child(2) { height: 16px; animation-delay: 0.15s; }
+        .wave-bars .bar:nth-child(3) { height: 12px; animation-delay: 0.3s; }
+        .wave-bars .bar:nth-child(4) { height: 20px; animation-delay: 0.45s; }
+        .wave-bars .bar:nth-child(5) { height: 10px; animation-delay: 0.6s; }
+
+        @keyframes wave-bar {
+            0%, 100% { transform: scaleY(1); }
+            50% { transform: scaleY(0.4); }
+        }
+
+        /* Preference page filter row */
+        .filter-row {
+            display: flex;
+            gap: 8px;
+            padding: 0 24px;
+            margin-bottom: 16px;
+            overflow-x: auto;
+            scrollbar-width: none;
+        }
+        .filter-row::-webkit-scrollbar { display: none; }
+
+        .filter-pill {
+            padding: 8px 18px;
+            border-radius: var(--radius-full);
+            background: var(--card-bg);
+            border: 1px solid var(--glass-border);
+            font-size: 13px;
+            font-weight: 500;
+            color: var(--text-secondary);
+            cursor: pointer;
+            white-space: nowrap;
+            transition: var(--transition);
+        }
+        .filter-pill.active {
+            background: rgba(255,209,102,0.2);
+            color: var(--accent);
+            border-color: var(--accent);
+        }
+
+        /* Empty state */
+        .empty-state {
+            text-align: center;
+            padding: 48px 24px;
+            color: var(--text-muted);
+        }
+        .empty-state-icon { font-size: 48px; margin-bottom: 16px; }
+        .empty-state-text { font-size: 14px; line-height: 1.6; }
+    </style>
+</head>
+<body>
+    <div class="app-container" id="app">
+
+        <!-- ==================== SPLASH ==================== -->
+        <div class="screen active" id="splash-screen">
+            <svg class="splash-logo" viewBox="0 0 120 120" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <circle cx="60" cy="60" r="56" fill="rgba(255,255,255,0.08)" stroke="rgba(255,255,255,0.2)" stroke-width="1.5"/>
+                <circle cx="60" cy="60" r="42" fill="rgba(255,255,255,0.05)" stroke="rgba(255,255,255,0.1)" stroke-width="1"/>
+                <!-- Microphone body -->
+                <rect x="48" y="30" width="24" height="36" rx="12" fill="url(#mic-grad)"/>
+                <!-- Microphone arc -->
+                <path d="M38 60 C38 74, 50 84, 60 84 C70 84, 82 74, 82 60" stroke="rgba(255,255,255,0.6)" stroke-width="3" fill="none" stroke-linecap="round"/>
+                <!-- Microphone stand -->
+                <line x1="60" y1="84" x2="60" y2="94" stroke="rgba(255,255,255,0.6)" stroke-width="3" stroke-linecap="round"/>
+                <line x1="50" y1="94" x2="70" y2="94" stroke="rgba(255,255,255,0.6)" stroke-width="3" stroke-linecap="round"/>
+                <!-- Voice waves -->
+                <path d="M88 44 C94 52, 94 68, 88 76" stroke="#ffd166" stroke-width="2.5" fill="none" stroke-linecap="round" opacity="0.8"/>
+                <path d="M96 38 C104 50, 104 70, 96 82" stroke="#ffd166" stroke-width="2" fill="none" stroke-linecap="round" opacity="0.5"/>
+                <defs>
+                    <linearGradient id="mic-grad" x1="48" y1="30" x2="72" y2="66">
+                        <stop offset="0%" stop-color="#ffd166"/>
+                        <stop offset="100%" stop-color="#f4a261"/>
+                    </linearGradient>
+                </defs>
+            </svg>
+            <div class="splash-name">VoiceBrief</div>
+            <div class="splash-tagline">Listen to News, Never Miss Updates</div>
+            <div class="splash-loader"></div>
+        </div>
+
+        <!-- ==================== HOME ==================== -->
+        <div class="screen" id="home-screen">
+            <div class="header">
+                <div class="header-title">VoiceBrief</div>
+                <div class="header-icon" id="notification-icon">
+                    <svg width="20" height="20" fill="white" viewBox="0 0 24 24"><path d="M12 22c1.1 0 2-.9 2-2h-4a2 2 0 0 0 2 2zm6-6v-5c0-3.07-1.64-5.64-4.5-6.32V4c0-.83-.67-1.5-1.5-1.5s-1.5.67-1.5 1.5v.68C7.63 5.36 6 7.92 6 11v5l-2 2v1h16v-1l-2-2z"/></svg>
+                </div>
+            </div>
+
+            <!-- News Section -->
+            <div class="section-title animate-in"><span class="emoji">📰</span> Top News</div>
+            <div class="section-subtitle animate-in animate-delay-1">Today's headlines, read aloud for you</div>
+            <div class="cards-scroll animate-in animate-delay-2">
+                <div class="card" onclick="openPlayer('AI Revolution in Healthcare', 'TechCrunch • 3 min')">
+                    <div class="card-tag">Technology</div>
+                    <div class="card-title">AI Revolution in Healthcare: What 2026 Holds</div>
+                    <div class="card-summary">New AI models are transforming diagnostics and patient care across hospitals worldwide.</div>
+                    <div class="card-footer">
+                        <span class="card-time">🕐 3 min listen</span>
+                        <button class="play-btn" onclick="event.stopPropagation(); openPlayer('AI Revolution in Healthcare', 'TechCrunch • 3 min')">
+                            <svg viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
+                        </button>
+                    </div>
+                </div>
+                <div class="card" onclick="openPlayer('Global Markets Rally', 'Bloomberg • 2 min')">
+                    <div class="card-tag">Business</div>
+                    <div class="card-title">Global Markets Rally Amid Strong Earnings</div>
+                    <div class="card-summary">Major indices hit all-time highs as tech giants report record quarterly profits.</div>
+                    <div class="card-footer">
+                        <span class="card-time">🕐 2 min listen</span>
+                        <button class="play-btn" onclick="event.stopPropagation(); openPlayer('Global Markets Rally', 'Bloomberg • 2 min')">
+                            <svg viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
+                        </button>
+                    </div>
+                </div>
+                <div class="card" onclick="openPlayer('Mars Mission Update', 'NASA News • 4 min')">
+                    <div class="card-tag">Science</div>
+                    <div class="card-title">Mars Mission: New Discoveries Unveiled</div>
+                    <div class="card-summary">NASA's latest rover data reveals signs of ancient microbial activity on the red planet.</div>
+                    <div class="card-footer">
+                        <span class="card-time">🕐 4 min listen</span>
+                        <button class="play-btn" onclick="event.stopPropagation(); openPlayer('Mars Mission Update', 'NASA News • 4 min')">
+                            <svg viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Daily Updates Section -->
+            <div class="section-title animate-in animate-delay-2"><span class="emoji">📢</span> Daily Updates</div>
+            <div class="section-subtitle animate-in animate-delay-3">Quick briefs you shouldn't miss</div>
+            <div class="cards-vertical animate-in animate-delay-3">
+                <div class="card-h" onclick="openPlayer('UPSC Prelims 2026 Date Announced', 'Exam Updates • 2 min')">
+                    <div class="card-h-icon">📋</div>
+                    <div class="card-h-content">
+                        <div class="card-h-title">UPSC Prelims 2026 Date Announced</div>
+                        <div class="card-h-desc">Important dates and preparation tips for civil services aspirants</div>
+                    </div>
+                    <button class="play-btn-sm" onclick="event.stopPropagation(); openPlayer('UPSC Prelims 2026 Date', 'Exam Updates • 2 min')">
+                        <svg viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
+                    </button>
+                </div>
+                <div class="card-h" onclick="openPlayer('IPL 2026 Auction Highlights', 'Sports Update • 3 min')">
+                    <div class="card-h-icon">🏏</div>
+                    <div class="card-h-content">
+                        <div class="card-h-title">IPL 2026 Auction Highlights</div>
+                        <div class="card-h-desc">Top picks and surprise buys from the mega auction event</div>
+                    </div>
+                    <button class="play-btn-sm" onclick="event.stopPropagation(); openPlayer('IPL 2026 Auction', 'Sports • 3 min')">
+                        <svg viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
+                    </button>
+                </div>
+                <div class="card-h" onclick="openPlayer('New IT Jobs Report', 'Career Brief • 2 min')">
+                    <div class="card-h-icon">💼</div>
+                    <div class="card-h-content">
+                        <div class="card-h-title">New IT Jobs Report: March 2026</div>
+                        <div class="card-h-desc">Hiring trends, top companies, and most in-demand skills</div>
+                    </div>
+                    <button class="play-btn-sm" onclick="event.stopPropagation(); openPlayer('IT Jobs Report', 'Career Brief • 2 min')">
+                        <svg viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
+                    </button>
+                </div>
+                <div class="card-h" onclick="openPlayer('Weather Update', 'Daily Brief • 1 min')">
+                    <div class="card-h-icon">🌤️</div>
+                    <div class="card-h-content">
+                        <div class="card-h-title">Weather Outlook: Week Ahead</div>
+                        <div class="card-h-desc">Temperatures rising across north India, rain expected in south</div>
+                    </div>
+                    <button class="play-btn-sm" onclick="event.stopPropagation(); openPlayer('Weather Update', 'Daily Brief • 1 min')">
+                        <svg viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- ==================== PERSONALIZED FEED ==================== -->
+        <div class="screen" id="feed-screen">
+            <div class="header">
+                <div class="header-title">Your Feed</div>
+                <div class="header-icon" onclick="navigateTo('categories')">
+                    <svg width="20" height="20" fill="white" viewBox="0 0 24 24"><path d="M3 17v2h6v-2H3zM3 5v2h10V5H3zm10 16v-2h8v-2h-8v-2h-2v6h2zM7 9v2H3v2h4v2h2V9H7zm14 4v-2H11v2h10zm-6-4h2V7h4V5h-4V3h-2v6z"/></svg>
+                </div>
+            </div>
+
+            <div class="section-title">🎯 Personalized for You</div>
+            <div class="section-subtitle">Based on your interests</div>
+
+            <!-- Filter Pills -->
+            <div class="filter-row">
+                <div class="filter-pill active" onclick="filterFeed(this, 'all')">All</div>
+                <div class="filter-pill" onclick="filterFeed(this, 'tech')">💻 Tech</div>
+                <div class="filter-pill" onclick="filterFeed(this, 'jobs')">💼 Jobs</div>
+                <div class="filter-pill" onclick="filterFeed(this, 'sports')">🏏 Sports</div>
+                <div class="filter-pill" onclick="filterFeed(this, 'business')">📈 Business</div>
+            </div>
+
+            <div class="cards-vertical" id="feed-cards">
+                <div class="card-h" data-category="tech" onclick="openPlayer('GPT-5 Launch Details', 'Tech News • 3 min')">
+                    <div class="card-h-icon">🤖</div>
+                    <div class="card-h-content">
+                        <div class="card-h-title">GPT-5 Launch: Everything We Know</div>
+                        <div class="card-h-desc">OpenAI's next-gen model brings multimodal reasoning capabilities</div>
+                    </div>
+                    <button class="play-btn-sm" onclick="event.stopPropagation(); openPlayer('GPT-5 Launch', 'Tech News • 3 min')">
+                        <svg viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
+                    </button>
+                </div>
+                <div class="card-h" data-category="jobs" onclick="openPlayer('TCS Hiring 30K Freshers', 'Career • 2 min')">
+                    <div class="card-h-icon">🎓</div>
+                    <div class="card-h-content">
+                        <div class="card-h-title">TCS Hiring 30K Freshers in 2026</div>
+                        <div class="card-h-desc">Mass recruitment drive opens for engineering graduates</div>
+                    </div>
+                    <button class="play-btn-sm" onclick="event.stopPropagation(); openPlayer('TCS Hiring', 'Career • 2 min')">
+                        <svg viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
+                    </button>
+                </div>
+                <div class="card-h" data-category="sports" onclick="openPlayer('India Wins Test Series', 'Sports • 2 min')">
+                    <div class="card-h-icon">🏆</div>
+                    <div class="card-h-content">
+                        <div class="card-h-title">India Wins Test Series Against Australia</div>
+                        <div class="card-h-desc">Historic 3-1 victory secures Border-Gavaskar Trophy once again</div>
+                    </div>
+                    <button class="play-btn-sm" onclick="event.stopPropagation(); openPlayer('India Wins Series', 'Sports • 2 min')">
+                        <svg viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
+                    </button>
+                </div>
+                <div class="card-h" data-category="tech" onclick="openPlayer('React 20 Released', 'Tech • 2 min')">
+                    <div class="card-h-icon">⚛️</div>
+                    <div class="card-h-content">
+                        <div class="card-h-title">React 20 Released with Server Actions</div>
+                        <div class="card-h-desc">New framework features simplify full-stack development</div>
+                    </div>
+                    <button class="play-btn-sm" onclick="event.stopPropagation(); openPlayer('React 20 Released', 'Tech • 2 min')">
+                        <svg viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
+                    </button>
+                </div>
+                <div class="card-h" data-category="business" onclick="openPlayer('Sensex Crosses 100K', 'Business • 3 min')">
+                    <div class="card-h-icon">📊</div>
+                    <div class="card-h-content">
+                        <div class="card-h-title">Sensex Crosses 100K Milestone</div>
+                        <div class="card-h-desc">Indian stock market celebrates historic achievement driven by FII inflows</div>
+                    </div>
+                    <button class="play-btn-sm" onclick="event.stopPropagation(); openPlayer('Sensex 100K', 'Business • 3 min')">
+                        <svg viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
+                    </button>
+                </div>
+                <div class="card-h" data-category="jobs" onclick="openPlayer('Gate 2026 Results', 'Exam Updates • 2 min')">
+                    <div class="card-h-icon">📝</div>
+                    <div class="card-h-content">
+                        <div class="card-h-title">GATE 2026 Results Declared</div>
+                        <div class="card-h-desc">Cut-off scores and topper interviews from this year's exam</div>
+                    </div>
+                    <button class="play-btn-sm" onclick="event.stopPropagation(); openPlayer('GATE 2026 Results', 'Exam Updates • 2 min')">
+                        <svg viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- ==================== CATEGORIES ==================== -->
+        <div class="screen" id="categories-screen">
+            <div class="header">
+                <div class="header-title">Categories</div>
+                <div class="header-icon">
+                    <svg width="20" height="20" fill="white" viewBox="0 0 24 24"><path d="M11 18h2v-2h-2v2zm1-16C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8zm0-14c-2.21 0-4 1.79-4 4h2c0-1.1.9-2 2-2s2 .9 2 2c0 2-3 1.75-3 5h2c0-2.25 3-2.5 3-5 0-2.21-1.79-4-4-4z"/></svg>
+                </div>
+            </div>
+
+            <div class="section-title">✨ Select Your Interests</div>
+            <div class="section-subtitle" style="margin-bottom: 24px;">Choose topics to personalize your feed</div>
+
+            <div class="cat-grid">
+                <div class="cat-card selected" onclick="toggleCategory(this)">
+                    <div class="cat-card-emoji">💻</div>
+                    <div class="cat-card-name">Technology</div>
+                    <div class="cat-card-count">42 stories today</div>
+                </div>
+                <div class="cat-card" onclick="toggleCategory(this)">
+                    <div class="cat-card-emoji">🏏</div>
+                    <div class="cat-card-name">Sports</div>
+                    <div class="cat-card-count">28 stories today</div>
+                </div>
+                <div class="cat-card selected" onclick="toggleCategory(this)">
+                    <div class="cat-card-emoji">📈</div>
+                    <div class="cat-card-name">Business</div>
+                    <div class="cat-card-count">35 stories today</div>
+                </div>
+                <div class="cat-card" onclick="toggleCategory(this)">
+                    <div class="cat-card-emoji">💼</div>
+                    <div class="cat-card-name">Jobs / Exams</div>
+                    <div class="cat-card-count">19 stories today</div>
+                </div>
+                <div class="cat-card" onclick="toggleCategory(this)">
+                    <div class="cat-card-emoji">🎬</div>
+                    <div class="cat-card-name">Entertainment</div>
+                    <div class="cat-card-count">31 stories today</div>
+                </div>
+                <div class="cat-card" onclick="toggleCategory(this)">
+                    <div class="cat-card-emoji">🔬</div>
+                    <div class="cat-card-name">Science</div>
+                    <div class="cat-card-count">15 stories today</div>
+                </div>
+                <div class="cat-card" onclick="toggleCategory(this)">
+                    <div class="cat-card-emoji">🏥</div>
+                    <div class="cat-card-name">Health</div>
+                    <div class="cat-card-count">22 stories today</div>
+                </div>
+                <div class="cat-card" onclick="toggleCategory(this)">
+                    <div class="cat-card-emoji">🌍</div>
+                    <div class="cat-card-name">World</div>
+                    <div class="cat-card-count">38 stories today</div>
+                </div>
+            </div>
+
+            <button class="save-btn" id="save-categories-btn" onclick="saveCategories()">Save Preferences</button>
+        </div>
+
+        <!-- ==================== AUDIO PLAYER OVERLAY ==================== -->
+        <div class="player-overlay" id="player-overlay">
+            <div class="player-bg">
+                <div class="player-handle" onclick="closePlayer()"></div>
+
+                <div class="player-art">
+                    <svg viewBox="0 0 80 80" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <rect x="28" y="15" width="24" height="30" rx="12" fill="rgba(255,255,255,0.9)"/>
+                        <path d="M22 40 C22 52, 32 60, 40 60 C48 60, 58 52, 58 40" stroke="rgba(255,255,255,0.5)" stroke-width="3" fill="none" stroke-linecap="round"/>
+                        <line x1="40" y1="60" x2="40" y2="68" stroke="rgba(255,255,255,0.5)" stroke-width="3" stroke-linecap="round"/>
+                        <line x1="32" y1="68" x2="48" y2="68" stroke="rgba(255,255,255,0.5)" stroke-width="3" stroke-linecap="round"/>
+                    </svg>
+                </div>
+
+                <div class="player-title" id="player-title">Now Playing</div>
+                <div class="player-source" id="player-source">Source • Duration</div>
+
+                <div class="player-voice">
+                    <div class="wave-bars">
+                        <div class="bar"></div><div class="bar"></div><div class="bar"></div><div class="bar"></div><div class="bar"></div>
+                    </div>
+                    Murf AI Voice
+                </div>
+
+                <div class="progress-container">
+                    <div class="progress-bar" onclick="seekProgress(event)">
+                        <div class="progress-fill" id="progress-fill"></div>
+                    </div>
+                    <div class="progress-times">
+                        <span id="time-current">0:00</span>
+                        <span id="time-total">3:00</span>
+                    </div>
+                </div>
+
+                <div class="player-controls">
+                    <button class="ctrl-btn" id="btn-rewind" onclick="seekBack()">
+                        <svg viewBox="0 0 24 24"><path d="M11 18V6l-8.5 6 8.5 6zm.5-6l8.5 6V6l-8.5 6z"/></svg>
+                    </button>
+                    <button class="ctrl-play" id="btn-play-pause" onclick="togglePlay()">
+                        <svg viewBox="0 0 24 24" id="play-icon"><path d="M8 5v14l11-7z"/></svg>
+                    </button>
+                    <button class="ctrl-btn" id="btn-forward" onclick="seekForward()">
+                        <svg viewBox="0 0 24 24"><path d="M4 18l8.5-6L4 6v12zm9-12v12l8.5-6L13 6z"/></svg>
+                    </button>
+                </div>
+
+                <button class="player-stop-btn" onclick="stopAudio()">⏹ Stop & Close</button>
+            </div>
+        </div>
+
+        <!-- ==================== BOTTOM NAV ==================== -->
+        <nav class="bottom-nav" id="bottom-nav" style="display:none;">
+            <div class="nav-inner">
+                <div class="nav-item active" id="nav-home" onclick="navigateTo('home')">
+                    <svg viewBox="0 0 24 24"><path d="M10 20v-6h4v6h5v-8h3L12 3 2 12h3v8z"/></svg>
+                    <span>Home</span>
+                </div>
+                <div class="nav-item" id="nav-feed" onclick="navigateTo('feed')">
+                    <svg viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/></svg>
+                    <span>For You</span>
+                </div>
+                <div class="nav-item" id="nav-categories" onclick="navigateTo('categories')">
+                    <svg viewBox="0 0 24 24"><path d="M12 2l-5.5 9h11L12 2zm0 3.84L13.93 9h-3.87L12 5.84zM17.5 13c-2.49 0-4.5 2.01-4.5 4.5s2.01 4.5 4.5 4.5 4.5-2.01 4.5-4.5-2.01-4.5-4.5-4.5zm0 7c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5zM3 21.5h8v-8H3v8zm2-6h4v4H5v-4z"/></svg>
+                    <span>Explore</span>
+                </div>
+            </div>
+        </nav>
+    </div>
+
+    <script>
+        // ==================== STATE ====================
+        let currentScreen = 'splash';
+        let isPlaying = false;
+        let progressInterval = null;
+        let progressValue = 0;
+
+        // ==================== SPLASH TRANSITION ====================
+        setTimeout(() => {
+            navigateTo('home');
+            document.getElementById('bottom-nav').style.display = 'block';
+        }, 2800);
+
+        // ==================== NAVIGATION ====================
+        function navigateTo(screen) {
+            const screens = document.querySelectorAll('.screen');
+            const navItems = document.querySelectorAll('.nav-item');
+
+            screens.forEach(s => s.classList.remove('active'));
+            navItems.forEach(n => n.classList.remove('active'));
+
+            const targetScreen = document.getElementById(screen + '-screen');
+            if (targetScreen) {
+                targetScreen.classList.add('active');
+            }
+
+            const targetNav = document.getElementById('nav-' + screen);
+            if (targetNav) {
+                targetNav.classList.add('active');
+            }
+
+            currentScreen = screen;
+
+            // Hide splash after first navigation
+            if (screen !== 'splash') {
+                document.getElementById('splash-screen').style.display = 'none';
+            }
+        }
+
+        // ==================== AUDIO PLAYER ====================
+        function openPlayer(title, source) {
+            document.getElementById('player-title').textContent = title;
+            document.getElementById('player-source').textContent = source;
+            document.getElementById('player-overlay').classList.add('show');
+
+            // Reset progress
+            progressValue = 0;
+            updateProgress(0);
+            isPlaying = true;
+            updatePlayIcon();
+            startProgress();
+        }
+
+        function closePlayer() {
+            document.getElementById('player-overlay').classList.remove('show');
+            stopProgress();
+            isPlaying = false;
+        }
+
+        function togglePlay() {
+            isPlaying = !isPlaying;
+            updatePlayIcon();
+            if (isPlaying) {
+                startProgress();
+            } else {
+                stopProgress();
+            }
+        }
+
+        function updatePlayIcon() {
+            const icon = document.getElementById('play-icon');
+            if (isPlaying) {
+                icon.innerHTML = '<rect x="6" y="4" width="4" height="16" rx="1"/><rect x="14" y="4" width="4" height="16" rx="1"/>';
+            } else {
+                icon.innerHTML = '<path d="M8 5v14l11-7z"/>';
+            }
+        }
+
+        function startProgress() {
+            stopProgress();
+            progressInterval = setInterval(() => {
+                progressValue += 0.5;
+                if (progressValue >= 100) {
+                    progressValue = 100;
+                    stopProgress();
+                    isPlaying = false;
+                    updatePlayIcon();
+                }
+                updateProgress(progressValue);
+            }, 300);
+        }
+
+        function stopProgress() {
+            if (progressInterval) {
+                clearInterval(progressInterval);
+                progressInterval = null;
+            }
+        }
+
+        function updateProgress(value) {
+            document.getElementById('progress-fill').style.width = value + '%';
+            // Update time display
+            const totalSeconds = 180; // 3 minutes
+            const currentSeconds = Math.floor((value / 100) * totalSeconds);
+            const currentMin = Math.floor(currentSeconds / 60);
+            const currentSec = currentSeconds % 60;
+            document.getElementById('time-current').textContent =
+                currentMin + ':' + (currentSec < 10 ? '0' : '') + currentSec;
+        }
+
+        function seekProgress(event) {
+            const bar = event.currentTarget;
+            const rect = bar.getBoundingClientRect();
+            const x = event.clientX - rect.left;
+            const percent = (x / rect.width) * 100;
+            progressValue = Math.max(0, Math.min(100, percent));
+            updateProgress(progressValue);
+        }
+
+        function seekBack() {
+            progressValue = Math.max(0, progressValue - 10);
+            updateProgress(progressValue);
+        }
+
+        function seekForward() {
+            progressValue = Math.min(100, progressValue + 10);
+            updateProgress(progressValue);
+        }
+
+        function stopAudio() {
+            stopProgress();
+            progressValue = 0;
+            updateProgress(0);
+            isPlaying = false;
+            updatePlayIcon();
+            closePlayer();
+        }
+
+        // ==================== CATEGORIES ====================
+        function toggleCategory(el) {
+            el.classList.toggle('selected');
+        }
+
+        function saveCategories() {
+            const btn = document.getElementById('save-categories-btn');
+            const selectedCount = document.querySelectorAll('.cat-card.selected').length;
+            btn.textContent = `✓ Saved ${selectedCount} Categories!`;
+            btn.style.background = 'linear-gradient(135deg, #06d6a0, #118ab2)';
+
+            setTimeout(() => {
+                btn.textContent = 'Save Preferences';
+                btn.style.background = 'linear-gradient(135deg, var(--accent), #f4a261)';
+                navigateTo('feed');
+            }, 1200);
+        }
+
+        // ==================== FEED FILTER ====================
+        function filterFeed(el, category) {
+            // Toggle active pill
+            document.querySelectorAll('.filter-pill').forEach(p => p.classList.remove('active'));
+            el.classList.add('active');
+
+            // Filter cards
+            const cards = document.querySelectorAll('#feed-cards .card-h');
+            cards.forEach(card => {
+                if (category === 'all' || card.dataset.category === category) {
+                    card.style.display = 'flex';
+                    card.style.animation = 'fadeInUp 0.3s ease both';
+                } else {
+                    card.style.display = 'none';
+                }
+            });
+        }
+    </script>
+</body>
+</html>
